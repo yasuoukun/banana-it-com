@@ -21,6 +21,8 @@
     padding: 0;
     box-sizing: border-box;
     font-family: 'Prompt', sans-serif;
+    -webkit-tap-highlight-color: transparent; /* Remove blue frame on mobile */
+    outline: none !important;
 }
 
 html {
@@ -331,15 +333,15 @@ ul { list-style: none; }
     transform: translateY(-50%);
     width: 45px;
     height: 45px;
-    background: #000;
-    color: #ffe000;
+    background: rgba(0,0,0,0.4); /* Faded background */
+    color: rgba(255, 224, 0, 0.7); /* Faded icon */
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     z-index: 10;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     transition: var(--transition);
 }
 
