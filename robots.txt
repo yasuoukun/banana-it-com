@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://banana-it-chaiyaphum.netlify.app/sitemap.xml
