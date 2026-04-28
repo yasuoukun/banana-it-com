@@ -162,61 +162,154 @@ function updateReelsArrows() {
     if (scrollLeft + clientWidth >= scrollWidth - 5) rightArrow.classList.add('hidden'); else rightArrow.classList.remove('hidden');
 }
 
-// Draggable FB Button Functionality
+// Draggable FB Button Functionality with Physics (Messenger-style)
 function initDraggableFB() {
     const fbBtn = document.querySelector('.fb-float');
     if (!fbBtn) return;
 
     let isDragging = false;
-    let offset = { x: 0, y: 0 };
+    let startX, startY;
+    let currentX, currentY;
+    
+    // Velocity tracking
+    let velocityX = 0;
+    let velocityY = 0;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let lastTime = 0;
+    let animationFrameId = null;
 
-    fbBtn.addEventListener('touchstart', (e) => {
+    const onStart = (e) => {
+        // Prevent dragging with mouse on PC (large screens)
+        const isTouch = e.type === 'touchstart';
+        if (!isTouch && window.innerWidth > 1024) return;
+        
         isDragging = true;
-        const touch = e.touches[0];
+        fbBtn.classList.add('is-dragging');
+        fbBtn.classList.add('has-moved');
+
+        
+        const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+        const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+        
         const rect = fbBtn.getBoundingClientRect();
-        offset.x = touch.clientX - rect.left;
-        offset.y = touch.clientY - rect.top;
-        fbBtn.style.transition = 'none'; 
-    });
-
-    document.addEventListener('touchmove', (e) => {
-        if (!isDragging) return;
-        const touch = e.touches[0];
+        currentX = rect.left;
+        currentY = rect.top;
+        startX = clientX - currentX;
+        startY = clientY - currentY;
         
-        let x = touch.clientX - offset.x;
-        let y = touch.clientY - offset.y;
-
-        const btnWidth = fbBtn.offsetWidth;
-        const btnHeight = fbBtn.offsetHeight;
+        lastMouseX = clientX;
+        lastMouseY = clientY;
+        lastTime = performance.now();
         
-        x = Math.max(0, Math.min(window.innerWidth - btnWidth, x));
-        y = Math.max(0, Math.min(window.innerHeight - btnHeight, y));
+        cancelAnimationFrame(animationFrameId);
+        fbBtn.style.transition = 'none';
 
-        fbBtn.style.left = `${x}px`;
-        fbBtn.style.top = `${y}px`;
+        // Switch to pixel-based positioning for physics
+        fbBtn.style.left = `${currentX}px`;
+        fbBtn.style.top = `${currentY}px`;
         fbBtn.style.bottom = 'auto';
         fbBtn.style.right = 'auto';
         
-        e.preventDefault(); 
-    }, { passive: false });
+        if (isTouch) e.preventDefault();
+    };
 
-    document.addEventListener('touchend', (e) => {
+    const onMove = (e) => {
+        if (!isDragging) return;
+        
+        const isTouch = e.type === 'touchmove';
+        const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+        const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+        
+        const now = performance.now();
+        const dt = now - lastTime;
+        
+        if (dt > 0) {
+            velocityX = (clientX - lastMouseX) / dt;
+            velocityY = (clientY - lastMouseY) / dt;
+        }
+        
+        lastMouseX = clientX;
+        lastMouseY = clientY;
+        lastTime = now;
+
+        currentX = clientX - startX;
+        currentY = clientY - startY;
+
+        // Keep within bounds
+        const btnWidth = fbBtn.offsetWidth;
+        const btnHeight = fbBtn.offsetHeight;
+        currentX = Math.max(0, Math.min(window.innerWidth - btnWidth, currentX));
+        currentY = Math.max(0, Math.min(window.innerHeight - btnHeight, currentY));
+
+        fbBtn.style.left = `${currentX}px`;
+        fbBtn.style.top = `${currentY}px`;
+        
+        if (isTouch) e.preventDefault();
+    };
+
+    const onEnd = () => {
         if (!isDragging) return;
         isDragging = false;
+        fbBtn.classList.remove('is-dragging');
         
-        const rect = fbBtn.getBoundingClientRect();
-        const screenWidth = window.innerWidth;
-        const btnWidth = fbBtn.offsetWidth;
+        const friction = 0.92;
+        const bounce = 0.2;
+        const snapSpring = 0.08;
         
-        fbBtn.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-        
-        if (rect.left + btnWidth / 2 < screenWidth / 2) {
-            fbBtn.style.left = '15px';
-        } else {
-            fbBtn.style.left = `${screenWidth - btnWidth - 15}px`;
-        }
-    });
+        const animate = () => {
+            // Cap velocity
+            velocityX = Math.max(-1.5, Math.min(1.5, velocityX));
+            velocityY = Math.max(-1.5, Math.min(1.5, velocityY));
+
+            currentX += velocityX * 16;
+            currentY += velocityY * 16;
+            
+            velocityX *= friction;
+            velocityY *= friction;
+
+            const btnWidth = fbBtn.offsetWidth;
+            const btnHeight = fbBtn.offsetHeight;
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+
+            if (currentX < 0) { currentX = 0; velocityX *= -bounce; }
+            if (currentX > screenWidth - btnWidth) { currentX = screenWidth - btnWidth; velocityX *= -bounce; }
+            if (currentY < 0) { currentY = 0; velocityY *= -bounce; }
+            if (currentY > screenHeight - btnHeight) { currentY = screenHeight - btnHeight; velocityY *= -bounce; }
+
+            if (Math.abs(velocityX) < 0.5) {
+                const targetX = currentX + btnWidth / 2 < screenWidth / 2 ? 15 : screenWidth - btnWidth - 15;
+                currentX += (targetX - currentX) * snapSpring;
+            }
+
+            fbBtn.style.left = `${currentX}px`;
+            fbBtn.style.top = `${currentY}px`;
+
+            const targetSnapX = currentX + btnWidth / 2 < screenWidth / 2 ? 15 : screenWidth - btnWidth - 15;
+            if (Math.abs(velocityX) < 0.01 && Math.abs(velocityY) < 0.01 && Math.abs(currentX - targetSnapX) < 0.1) {
+                fbBtn.style.left = `${targetSnapX}px`;
+                cancelAnimationFrame(animationFrameId);
+                return;
+            }
+
+            animationFrameId = requestAnimationFrame(animate);
+        };
+
+        animationFrameId = requestAnimationFrame(animate);
+    };
+
+    fbBtn.addEventListener('mousedown', onStart);
+    fbBtn.addEventListener('touchstart', onStart, { passive: false });
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: false });
+
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchend', onEnd);
 }
+
+
 
 // Drag-to-Scroll Functionality
 function initDragToScroll(selector) {
