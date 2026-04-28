@@ -225,7 +225,31 @@ ul { list-style: none; }
     margin-bottom: 25px; 
     word-wrap: break-word;
 }
-.text-accent { color: #e6c200; font-weight: 800; }
+.text-accent { 
+    background: linear-gradient(
+        90deg, 
+        #d4af37 0%, 
+        #f9d423 25%, 
+        #aa771c 50%, 
+        #f9d423 75%, 
+        #d4af37 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: #e6c200; /* Fallback */
+    font-weight: 800;
+    animation: shine 6s linear infinite;
+    display: inline-block;
+}
+
+@keyframes shine {
+    to {
+        background-position: 200% center;
+    }
+}
+
 .hero-desc { color: var(--text-muted); font-size: 1.1rem; margin-bottom: 40px; }
 
 .hero-image { flex: 1; text-align: center; }
@@ -534,7 +558,11 @@ ul { list-style: none; }
     
     .menu-toggle { padding: 5px 8px; font-size: 0.9rem; }
     
-    .banner-section.top-banner { padding-top: 90px; }
+    .banner-section.top-banner { padding-top: 110px; padding-bottom: 20px; }
+
+    .banner-section.top-banner .container { padding: 0 10px; }
+    .banner-wrapper { border-radius: 12px; }
+
     .price-cat-btn { font-size: 0.8rem; padding: 8px 15px; }
     
     .service-card { padding: 25px; }
